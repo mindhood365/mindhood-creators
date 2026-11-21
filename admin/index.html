@@ -116,7 +116,7 @@ $('#out').addEventListener('click',function(){T='';try{sessionStorage.removeItem
 $('#cf').addEventListener('submit',function(e){
   e.preventDefault();$('#cerr').textContent='';
   api('/admin/creators',{name:$('#n').value,id:$('#i').value,phone:$('#p').value,tg:$('#t').value,pw:$('#w').value}).then(function(j){
-    var c=j.creator,link='https://www.pankajmindhood.com/mind-sanitization?ref='+c.code;
+    var c=j.creator,link='https://pankajmindhood.com/r/'+c.code;
     var msg='Dashboard: '+location.origin+'/\nID: '+c.id+'\nPassword: '+j.password+'\nYour link: '+link+'\nCode: '+c.code;
     var b=$('#created');b.hidden=false;b.innerHTML='<b class="ok">Partner created. Password is shown only now.</b><pre style="white-space:pre-wrap;margin:8px 0" id="msg">'+esc(msg)+'</pre><button class="s" id="cp">Copy details</button>';
     $('#cp').onclick=function(){try{navigator.clipboard.writeText(msg);this.textContent='Copied'}catch(e){}};

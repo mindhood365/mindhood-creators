@@ -191,7 +191,7 @@ export default async (req) => {
         for (let i = 0; i < 20 && !code; i++) {
           const al = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
           let c = "";
-          for (let j = 0; j < 7; j++) c += al[crypto.randomInt(al.length)];
+          for (let j = 0; j < 6; j++) c += al[crypto.randomInt(al.length)];
           if (!(await creators.get("code:" + c, { type: "json" }))) code = c;
         }
         if (!code) return json({ error: "Could not make a code, try again" }, 500);
@@ -224,7 +224,7 @@ export default async (req) => {
           for (let i = 0; i < 20 && !code; i++) {
             const al = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
             let c = "";
-            for (let j = 0; j < 7; j++) c += al[crypto.randomInt(al.length)];
+            for (let j = 0; j < 6; j++) c += al[crypto.randomInt(al.length)];
             if (!(await creators.get("code:" + c, { type: "json" }))) code = c;
           }
           const old = c.code;
