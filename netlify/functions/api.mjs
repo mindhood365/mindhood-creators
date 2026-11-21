@@ -103,7 +103,12 @@ export default async (req) => {
   const path = url.pathname.replace(/^\/api/, "").replace(/\/$/, "") || "/";
   const method = req.method;
   let body = {};
-  if (method === "POST") { try { body = await req.json(); } catch { body = {}; } }
+  if (method === "POST") {
+    try {
+      if ((req.headers.get("content-type") || "").includes("x-www-form-urlencoded")) body = Object.fromEntries(new URLSearchParams(await req.text()));
+      else body = await req.json();
+    } catch { body = {}; }
+  }
   const creators = store("creators"), refs = store("referrals");
   const ip = req.headers.get("x-nf-client-connection-ip") || "x";
 
@@ -149,6 +154,7 @@ export default async (req) => {
       const amount = Number(body.amount) || 0;
       const pid = String(body.payment_id || "").replace(/[^A-Za-z0-9_-]/g, "");
       if (!pid || !amount) return json({ error: "payment_id and amount required" }, 400);
+      if (![99, 1999, 5999, 9999].includes(amount)) return json({ ok: true, matched: true, ignored: "amount" });
       const key = "r:" + code + ":" + pid;
       if (!(await refs.get(key, { type: "json" }))) {
         await refs.setJSON(key, {
