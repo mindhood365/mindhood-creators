@@ -187,8 +187,14 @@ export default async (req) => {
         const id = cleanId(body.id), name = String(body.name || "").trim().slice(0, 60);
         if (!id || !name) return json({ error: "Name and ID required" }, 400);
         if (await creators.get("c:" + id, { type: "json" })) return json({ error: "ID already exists" }, 409);
-        let code = cleanCode(body.code) || cleanCode(id).slice(0, 10);
-        if (await creators.get("code:" + code, { type: "json" })) return json({ error: "Referral code already used" }, 409);
+        let code = "";
+        for (let i = 0; i < 20 && !code; i++) {
+          const al = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+          let c = "";
+          for (let j = 0; j < 7; j++) c += al[crypto.randomInt(al.length)];
+          if (!(await creators.get("code:" + c, { type: "json" }))) code = c;
+        }
+        if (!code) return json({ error: "Could not make a code, try again" }, 500);
         const pw = String(body.pw || "").length >= 6 ? String(body.pw) : genPw();
         const salt = crypto.randomBytes(16).toString("hex");
         const c = {

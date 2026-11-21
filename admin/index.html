@@ -51,7 +51,6 @@ code{font-family:ui-monospace,monospace;font-size:13px;word-break:break-all}
     <form id="cf" class="g">
       <div><label for="n">Full name *</label><input id="n" required maxlength="60"></div>
       <div><label for="i">Login ID *</label><input id="i" required placeholder="e.g. riya.mind" autocapitalize="off"></div>
-      <div><label for="c">Referral code</label><input id="c" placeholder="auto from ID" autocapitalize="characters"></div>
       <div><label for="p">Mobile</label><input id="p" type="tel"></div>
       <div><label for="t">Telegram number</label><input id="t" type="tel"></div>
       <div><label for="w">Password (blank = auto)</label><input id="w" placeholder="min 6 characters"></div>
@@ -115,7 +114,7 @@ $('#lf').addEventListener('submit',function(e){
 $('#out').addEventListener('click',function(){T='';try{sessionStorage.removeItem('mh_a')}catch(e){}location.reload()});
 $('#cf').addEventListener('submit',function(e){
   e.preventDefault();$('#cerr').textContent='';
-  api('/admin/creators',{name:$('#n').value,id:$('#i').value,code:$('#c').value,phone:$('#p').value,tg:$('#t').value,pw:$('#w').value}).then(function(j){
+  api('/admin/creators',{name:$('#n').value,id:$('#i').value,phone:$('#p').value,tg:$('#t').value,pw:$('#w').value}).then(function(j){
     var c=j.creator,link='https://www.pankajmindhood.com/mind-sanitization?ref='+c.code;
     var msg='Dashboard: '+location.origin+'/\nID: '+c.id+'\nPassword: '+j.password+'\nYour link: '+link+'\nCode: '+c.code;
     var b=$('#created');b.hidden=false;b.innerHTML='<b class="ok">Partner created. Password is shown only now.</b><pre style="white-space:pre-wrap;margin:8px 0" id="msg">'+esc(msg)+'</pre><button class="s" id="cp">Copy details</button>';
