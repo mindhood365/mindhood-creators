@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Admin · Creator Partners</title>
+<style>
+:root{--bg:#0b0d17;--card:#141828;--line:#262c45;--tx:#eef0fa;--mu:#9aa1c0;--gold:#ffbf3c;--mint:#62e3a8;--red:#ff7a7a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:20px}
+.wrap{max-width:980px;margin:0 auto}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:16px;margin:0 0 12px}
+.mu{color:var(--mu);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin:16px 0}
+input{width:100%;background:#0e1120;border:1px solid var(--line);color:var(--tx);border-radius:10px;padding:10px 12px;font:inherit}
+input:focus{outline:2px solid var(--gold);outline-offset:1px}
+label{display:block;font-size:12px;color:var(--mu);margin:0 0 4px}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+button{background:var(--gold);color:#1a1300;border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:700;cursor:pointer}
+button.s{background:#1d2340;color:var(--tx);font-weight:600;padding:6px 10px;font-size:13px;border:1px solid var(--line)}
+button.r{color:var(--red)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mu);font-weight:600;font-size:12px}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+.ok{color:var(--mint)}.err{color:var(--red);min-height:20px;margin-top:8px}
+.box{background:#0e1120;border:1px dashed var(--gold);border-radius:10px;padding:12px;margin-top:12px;font-family:ui-monospace,monospace;font-size:14px;word-break:break-all}
+code{font-family:ui-monospace,monospace;font-size:13px;word-break:break-all}
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:#1d2340}
+.off{color:var(--red)}
+.scroll{overflow-x:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div id="login" class="card" style="max-width:380px;margin:12vh auto">
+  <h1>Admin</h1><p class="mu">Đe Pankaj Mindhood · Creator Partners</p>
+  <form id="lf"><label for="apw">Admin password</label><input id="apw" type="password" autocomplete="current-password" required>
+  <p class="err" id="lerr"></p><button type="submit">Sign in</button></form>
+</div>
+
+<div id="app" hidden>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+    <div><h1>Creator Partners</h1><span class="mu">Create partners, track sales, mark payouts</span></div>
+    <button class="s" id="out">Sign out</button>
+  </div>
+
+  <div class="card">
+    <h2>Add new partner</h2>
+    <form id="cf" class="g">
+      <div><label for="n">Full name *</label><input id="n" required maxlength="60"></div>
+      <div><label for="i">Login ID *</label><input id="i" required placeholder="e.g. riya.mind" autocapitalize="off"></div>
+      <div><label for="c">Referral code</label><input id="c" placeholder="auto from ID" autocapitalize="characters"></div>
+      <div><label for="p">Mobile</label><input id="p" type="tel"></div>
+      <div><label for="t">Telegram number</label><input id="t" type="tel"></div>
+      <div><label for="w">Password (blank = auto)</label><input id="w" placeholder="min 6 characters"></div>
+      <div style="align-self:end"><button type="submit">Create partner</button></div>
+    </form>
+    <p class="err" id="cerr"></p>
+    <div id="created" class="box" hidden></div>
+  </div>
+
+  <div class="card">
+    <h2>Partners</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Partner</th><th>Code</th><th>Sales</th><th>To pay</th><th>Paid</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+    <p class="mu" id="empty" hidden>No partners yet.</p>
+  </div>
+
+  <div class="card" id="detail" hidden></div>
+
+  <div class="card">
+    <h2>Connect sales (Make)</h2>
+    <p class="mu">After each Razorpay payment, Make sends one POST here. Sales with a matching referral code appear on that partner's dashboard.</p>
+    <div class="mu">URL</div><code id="iurl"></code>
+    <div class="mu" style="margin-top:8px">Key</div><code id="ikey"></code>
+    <div class="mu" style="margin-top:8px">JSON body</div>
+    <code>{"key":"…","code":"REFERRAL_CODE","payment_id":"pay_xxx","amount":99,"buyer":"First name"}</code>
+  </div>
+</div>
+</div>
+<script>
+(function(){
+var $=function(s){return document.querySelector(s)},T='';
+try{T=sessionStorage.getItem('mh_a')||''}catch(e){}
+function api(p,b){
+  return fetch('/api'+p,{method:b?'POST':'GET',headers:{'content-type':'application/json',authorization:'Bearer '+T},body:b?JSON.stringify(b):undefined})
+  .then(function(r){return r.json().then(function(j){if(!r.ok){var e=new Error(j.error||'error');e.status=r.status;throw e}return j})});
+}
+function inr(n){return '₹'+Math.round(n).toLocaleString('en-IN')}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function show(){$('#login').hidden=true;$('#app').hidden=false;load()}
+function load(){
+  api('/admin/overview').then(function(j){
+    $('#iurl').textContent=location.origin+'/api/ingest';$('#ikey').textContent=j.ingestKey;
+    $('#empty').hidden=j.creators.length>0;
+    $('#rows').innerHTML=j.creators.map(function(c){
+      return '<tr><td><b>'+esc(c.name)+'</b> '+(c.active?'':'<span class="tag off">off</span>')+'<br><span class="mu">'+esc(c.id)+' · '+esc(c.profile.phone)+'</span></td>'
+      +'<td><code>'+esc(c.code)+'</code></td><td>'+c.sales+'</td><td>'+inr(c.due)+'</td><td>'+inr(c.paid)+'</td>'
+      +'<td><div class="acts"><button class="s" data-a="view" data-id="'+esc(c.id)+'">Open</button>'
+      +'<button class="s" data-a="paid" data-id="'+esc(c.id)+'">Mark paid</button>'
+      +'<button class="s" data-a="reset" data-id="'+esc(c.id)+'">New password</button>'
+      +'<button class="s r" data-a="'+(c.active?'off':'on')+'" data-id="'+esc(c.id)+'">'+(c.active?'Disable':'Enable')+'</button></div></td></tr>';
+    }).join('');
+  }).catch(function(e){if(e.status===401){T='';$('#login').hidden=false;$('#app').hidden=true}});
+}
+$('#lf').addEventListener('submit',function(e){
+  e.preventDefault();$('#lerr').textContent='';
+  api('/admin/login',{pw:$('#apw').value}).then(function(j){T=j.token;try{sessionStorage.setItem('mh_a',T)}catch(e){}show()})
+  .catch(function(x){$('#lerr').textContent=x.message});
+});
+$('#out').addEventListener('click',function(){T='';try{sessionStorage.removeItem('mh_a')}catch(e){}location.reload()});
+$('#cf').addEventListener('submit',function(e){
+  e.preventDefault();$('#cerr').textContent='';
+  api('/admin/creators',{name:$('#n').value,id:$('#i').value,code:$('#c').value,phone:$('#p').value,tg:$('#t').value,pw:$('#w').value}).then(function(j){
+    var c=j.creator,link='https://www.pankajmindhood.com/mind-sanitization?ref='+c.code;
+    var msg='Dashboard: '+location.origin+'/\nID: '+c.id+'\nPassword: '+j.password+'\nYour link: '+link+'\nCode: '+c.code;
+    var b=$('#created');b.hidden=false;b.innerHTML='<b class="ok">Partner created. Password is shown only now.</b><pre style="white-space:pre-wrap;margin:8px 0" id="msg">'+esc(msg)+'</pre><button class="s" id="cp">Copy details</button>';
+    $('#cp').onclick=function(){try{navigator.clipboard.writeText(msg);this.textContent='Copied'}catch(e){}};
+    $('#cf').reset();load();
+  }).catch(function(x){$('#cerr').textContent=x.message});
+});
+$('#rows').addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;var id=b.dataset.id,a=b.dataset.a;
+  if(a==='view')return open(id);
+  if(a==='reset'){if(!confirm('Make a new password for '+id+'? The old one stops working.'))return;
+    api('/admin/creators/'+id+'/reset',{}).then(function(j){prompt('New password for '+id+' (copy it now):',j.password)})}
+  if(a==='off'||a==='on'){api('/admin/creators/'+id+'/active',{active:a==='on'}).then(load)}
+  if(a==='paid'){if(!confirm('Mark all pending and ready commissions for '+id+' as PAID?'))return;
+    api('/admin/creators/'+id+'/mark-paid',{}).then(function(j){alert(j.count+' sales marked paid, '+inr(j.amount));load()})}
+});
+function open(id){
+  api('/admin/creators/'+id).then(function(j){
+    var p=j.creator.profile,d=$('#detail');d.hidden=false;
+    d.innerHTML='<h2>'+esc(j.creator.name)+' · payout details</h2><p class="mu">Phone '+esc(p.phone)+' · Telegram '+esc(p.tg)+' · Email '+esc(p.email)+' · Cycle '+esc(p.cycle)+'</p>'
+    +'<p>'+(p.method==='upi'?'UPI: <b>'+esc(p.upi||'not added')+'</b>':'Bank: <b>'+esc(p.holder)+'</b>, '+esc(p.bank)+', A/C <b>'+esc(p.acc)+'</b>, IFSC '+esc(p.ifsc))+'</p>'
+    +'<div class="scroll"><table><thead><tr><th>Date</th><th>Payment</th><th>Plan</th><th>Commission</th><th>Status</th><th></th></tr></thead><tbody>'
+    +(j.referrals.map(function(r){return '<tr><td>'+new Date(r.ts).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})+'</td><td><code>'+esc(r.id)+'</code></td><td>'+inr(r.amount)+'</td><td>'+inr(r.commission)+'</td><td>'+esc(r.status)+'</td><td>'
+      +(r.status!=='refunded'&&r.status!=='paid'?'<button class="s r" data-rf="'+esc(r.id)+'">Refunded</button>':'')+'</td></tr>'}).join('')||'<tr><td colspan="6" class="mu">No sales yet.</td></tr>')
+    +'</tbody></table></div>';
+    d.scrollIntoView({behavior:'smooth'});
+    d.onclick=function(e){var b=e.target.closest('[data-rf]');if(!b||!confirm('Remove this sale from earnings (refunded)?'))return;
+      api('/admin/creators/'+id+'/refund',{payment_id:b.dataset.rf}).then(function(){open(id);load()})};
+  });
+}
+if(T)show();
+})();
+</script>
+</body>
+</html>

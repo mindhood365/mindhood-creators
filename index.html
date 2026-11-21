@@ -665,6 +665,15 @@ var T = {
 };
 var ORDER = ['s99','l1','l2','l3'];
 var DEMO = {id:'aarav.thinks',pw:'Mind@2026'};
+var LIVE = !/[?&]demo\b/.test(location.search);
+var TOK = '', ME = null;
+function tget(){try{return sessionStorage.getItem('mh_t')||''}catch(e){return ''}}
+function tset(v){try{v?sessionStorage.setItem('mh_t',v):sessionStorage.removeItem('mh_t')}catch(e){}}
+function api(path,body){
+  return fetch('/api'+path,{method:body?'POST':'GET',headers:{'content-type':'application/json','authorization':'Bearer '+TOK},body:body?JSON.stringify(body):undefined})
+   .then(function(r){return r.json().then(function(j){if(!r.ok){var e=new Error(j.error||'error');e.status=r.status;throw e}return j})});
+}
+var LINKBASE='https://www.pankajmindhood.com/mind-sanitization?ref=';
 
 /* ---------- Sample data ---------- */
 function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
@@ -681,9 +690,9 @@ function seed(){
   out.sort(function(a,b){return b.ts-a.ts});
   return out;
 }
-var S = {p:seed(),range:30,cycle:'weekly',filter:'all',shown:8,mix:1,live:false,uid:100};
+var S = {p:(/[?&]demo\b/.test(location.search)?seed():[]),range:30,cycle:'weekly',filter:'all',shown:8,mix:1,live:false,uid:100};
 
-function status(p){var age=(Date.now()-p.ts)/DAY;return age>=10?'paid':age>=3?'ready':'pending'}
+function status(p){if(p.status==='paid')return 'paid';var age=(Date.now()-p.ts)/DAY;return age>=10?'paid':age>=3?'ready':'pending'}
 function totals(){
   var t = {all:0,paid:0,ready:0,pending:0,count:0,by:{s99:0,l1:0,l2:0,l3:0},sum:{s99:0,l1:0,l2:0,l3:0}};
   S.p.forEach(function(p){var c=T[p.tier].comm;t.all+=c;t[status(p)]+=c;t.count++;t.by[p.tier]++;t.sum[p.tier]+=c});
@@ -867,7 +876,7 @@ function renderKpis(first){
 /* ---------- Hero numbers ---------- */
 function renderHero(){
   var t=totals(),h=new Date().getHours();
-  $('#hello').textContent='Good '+(h<12?'morning':h<17?'afternoon':'evening')+', Aarav';
+  $('#hello').textContent='Good '+(h<12?'morning':h<17?'afternoon':'evening')+', '+(LIVE&&ME?ME.name.split(' ')[0]:'Aarav');
   tweenBig($('#total'),t.all);
   tween($('#v-paid'),t.paid);tween($('#v-ready'),t.ready);tween($('#v-pend'),t.pending);
   var tot=Math.max(1,t.all);
@@ -994,7 +1003,7 @@ $('#chips').addEventListener('click',function(e){var b=e.target.closest('button'
 $('#more').addEventListener('click',function(){S.shown+=10;renderRows()});
 var cw=$('#chartwrap');cw.addEventListener('pointermove',chartHover);cw.addEventListener('pointerdown',chartHover);cw.addEventListener('pointerleave',chartLeave);
 $('#copy').addEventListener('click',function(){
-  var b=$('#copy'),txt=$('#linktxt').textContent;
+  var b=$('#copy'),txt=$('#linktxt').dataset.full||$('#linktxt').textContent;
   var done=function(m){b.textContent=m;setTimeout(function(){b.textContent='Copy link'},1600)};
   try{navigator.clipboard.writeText(txt).then(function(){done('Copied')},function(){done('Select and copy')})}catch(e){done('Select and copy')}
 });
@@ -1085,7 +1094,7 @@ function rules(o){
   if(o.method==='bank'){
     if(o.holder.length<2)r.holder='Enter the name on the account.';
     if(o.bank.length<2)r.bank='Enter your bank name.';
-    if(!/^\d{9,18}$/.test(o.acc))r.acc='Account numbers have 9 to 18 digits.';
+    if(!/^\d{9,18}$/.test(o.acc)&&!(LIVE&&/•/.test(o.acc)))r.acc='Account numbers have 9 to 18 digits.';
     if(!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(o.ifsc))r.ifsc='IFSC has 11 characters, like ABCD0123456.';
   }else if(!/^[\w.\-]{2,}@[A-Za-z]{2,}$/.test(o.upi))r.upi='Enter a UPI ID like name@bank.';
   return r;
@@ -1122,7 +1131,7 @@ $('#pform').addEventListener('input',function(e){
   var t=e.target;
   if(t.id==='pf-phone'||t.id==='pf-tg')t.value=fmtPh(t.value);
   if(t.id==='pf-ifsc')t.value=t.value.toUpperCase();
-  if(t.id==='pf-acc')t.value=digits(t.value).slice(0,18);
+  if(t.id==='pf-acc'&&!/•/.test(t.value))t.value=digits(t.value).slice(0,18);
   if(t.id==='pf-phone'&&$('#same').checked)F('tg').value=t.value;
   dirty();
 });
@@ -1140,9 +1149,11 @@ $('#pform').addEventListener('submit',function(e){
   var o=cur(),r=rules(o);showErr(r);
   var first=FK.filter(function(k){return r[k]})[0];
   if(first){F(first).focus();$('#pstat').textContent='Fix the highlighted fields to save.';return}
-  saved=o;S.cycle=o.cycle;segs();renderPayout();meter();dirty();
-  $('#pstat').textContent='Saved just now.';
-  note('Profile saved (demo)','Nothing leaves this demo. In the live version the team confirms payment details privately.');
+  function done(msg){saved=o;S.cycle=o.cycle;segs();renderPayout();meter();dirty();$('#pstat').textContent='Saved just now.';note('Profile saved',msg)}
+  if(!LIVE){done('Nothing leaves this demo.');return}
+  $('#pstat').textContent='Saving…';
+  api('/me/profile',o).then(function(j){ME=j.creator;done('The team confirms payment details privately before your first payout.')})
+   .catch(function(){$('#pstat').textContent='Could not save. Check your connection and try again.'});
 });
 loadForm(saved);meter();
 
@@ -1172,22 +1183,47 @@ $('#replay').addEventListener('click',playIntro);
 var form=$('#loginform'),uid=$('#uid'),pw=$('#pw'),err=$('#err'),go=$('#go');
 $('#eye').addEventListener('click',function(){var s=pw.type==='password';pw.type=s?'text':'password';this.textContent=s?'Hide':'Show';this.setAttribute('aria-label',s?'Hide password':'Show password')});
 $('#fill').addEventListener('click',function(){uid.value=DEMO.id;pw.value=DEMO.pw;err.textContent='';go.focus()});
+function bad(msg){
+  err.textContent=msg;
+  var c=$('#logincard');c.classList.remove('shake');void c.offsetWidth;c.classList.add('shake');
+  go.disabled=false;go.classList.remove('busy');$('#golabel').textContent='Open my dashboard';
+}
+function loadMe(j){
+  ME=j.creator;
+  S.p=(j.referrals||[]).filter(function(r){return r.status!=='refunded'}).map(function(r){return {id:r.id,tier:r.tier,ts:r.ts,who:r.who||'Buyer',status:r.status}});
+  var c=ME.profile||{};
+  saved={name:ME.name,email:c.email||'',phone:c.phone||'',tg:c.tg||'',holder:c.holder||'',bank:c.bank||'',acc:c.acc||'',ifsc:c.ifsc||'',upi:c.upi||'',method:c.method||'upi',cycle:c.cycle||'monthly'};
+  S.cycle=saved.cycle;
+  document.querySelectorAll('.who span,#pname~small').forEach(function(el){el.textContent='@'+ME.id});
+  $('#hname').textContent=ME.name;
+  $('#pf-handle').value=ME.id;
+  $('#linktxt').textContent=LINKBASE.replace('https://www.','')+ME.code;
+  $('#linktxt').dataset.full=LINKBASE+ME.code;
+  document.querySelectorAll('.codeline b').forEach(function(el){el.textContent=ME.code});
+  loadForm(saved);meter();
+}
+function startLive(first){
+  return api('/me').then(function(j){loadMe(j);return j});
+}
 form.addEventListener('submit',function(e){
   e.preventDefault();
-  if(uid.value.trim().toLowerCase()===DEMO.id&&pw.value===DEMO.pw){
-    err.textContent='';go.disabled=true;go.classList.add('busy');$('#golabel').textContent='Unlocking your dashboard…';
-    setTimeout(enter,RM?0:1200);
-  }else{
-    err.textContent='That ID and password do not match. Use the sample login below the form.';
-    var c=$('#logincard');c.classList.remove('shake');void c.offsetWidth;c.classList.add('shake');
+  err.textContent='';go.disabled=true;go.classList.add('busy');$('#golabel').textContent='Unlocking your dashboard…';
+  if(!LIVE){
+    if(uid.value.trim().toLowerCase()===DEMO.id&&pw.value===DEMO.pw){setTimeout(enter,RM?0:1200)}
+    else bad('That ID and password do not match. Use the sample login below the form.');
+    return;
   }
+  api('/login',{id:uid.value.trim(),pw:pw.value}).then(function(j){
+    TOK=j.token;tset(TOK);return startLive();
+  }).then(function(){setTimeout(enter,RM?0:900)})
+  .catch(function(x){bad(x.status===401||x.status===429?x.message:'Could not connect. Please try again.')});
 });
 function enter(){
   var lg=$('#login'),d=$('#dash');
   d.hidden=false;d.classList.add('enter');setView('overview');
   lg.classList.add('leaving');
   window.scrollTo(0,0);
-  S.p=seed();S.filter='all';S.shown=8;
+  if(!LIVE)S.p=seed();S.filter='all';S.shown=8;
   KDEF.forEach(function(k){var el=$('#'+k.id);if(el)el._v=0});
   ['total','v-paid','v-ready','v-pend','payready','paypend'].forEach(function(id){$('#'+id)._v=0});
   ['sg-paid','sg-ready','sg-pend'].forEach(function(id){$('#'+id).style.width='0%'});
@@ -1198,12 +1234,30 @@ function enter(){
 }
 $('#logout').addEventListener('click',function(){
   var lg=$('#login'),d=$('#dash');
-  Cons.stop();d.hidden=true;d.classList.remove('enter');
+  TOK='';tset('');ME=null;clearInterval(poll);Cons.stop();d.hidden=true;d.classList.remove('enter');
   lg.hidden=false;void lg.offsetWidth;lg.classList.remove('leaving');
   go.disabled=false;go.classList.remove('busy');$('#golabel').textContent='Open my dashboard';
   uid.value='';pw.value='';err.textContent='';
   Bg.start();window.scrollTo(0,0);
 });
+var poll=null;
+function livePoll(){
+  clearInterval(poll);
+  poll=setInterval(function(){
+    if(document.hidden||!TOK)return;
+    api('/me').then(function(j){var n=(j.referrals||[]).length;var before=S.p.length;loadMe(j);if(S.p.length!==before){renderAll();Cons.start(S.p)}else renderAll()}).catch(function(){});
+  },30000);
+}
+if(LIVE){
+  document.querySelectorAll('.demo,.demo-pill,#sim').forEach(function(el){el.style.display='none'});
+  var pt=document.querySelector('#view-profile .ptitle span,.ptitle span');
+  var ft=document.querySelector('.foot span:last-child');if(ft)ft.textContent='Final attribution, refund and payout terms are in your collaboration agreement.';
+  document.querySelectorAll('.ptitle span').forEach(function(el){if(/Demo only|sample/i.test(el.textContent))el.textContent=''});
+  document.querySelectorAll('#paydate').forEach(function(el){if(el.previousSibling)el.parentNode.firstChild.textContent='Next payout date'});
+  var ol=enter;enter=function(){ol();livePoll()};
+  TOK=tget();
+  if(TOK){startLive().then(function(){enter()}).catch(function(){TOK='';tset('')})}
+}
 Bg.start();
 playIntro();
 })();
