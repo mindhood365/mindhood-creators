@@ -101,6 +101,7 @@ function load(){
       +'<td><code>'+esc(c.code)+'</code></td><td>'+c.sales+'</td><td>'+inr(c.due)+'</td><td>'+inr(c.paid)+'</td>'
       +'<td><div class="acts"><button class="s" data-a="view" data-id="'+esc(c.id)+'">Open</button>'
       +'<button class="s" data-a="paid" data-id="'+esc(c.id)+'">Mark paid</button>'
+      +'<button class="s" data-a="recode" data-id="'+esc(c.id)+'">New code</button>'
       +'<button class="s" data-a="reset" data-id="'+esc(c.id)+'">New password</button>'
       +'<button class="s r" data-a="'+(c.active?'off':'on')+'" data-id="'+esc(c.id)+'">'+(c.active?'Disable':'Enable')+'</button></div></td></tr>';
     }).join('');
@@ -127,6 +128,8 @@ $('#rows').addEventListener('click',function(e){
   if(a==='view')return open(id);
   if(a==='reset'){if(!confirm('Make a new password for '+id+'? The old one stops working.'))return;
     api('/admin/creators/'+id+'/reset',{}).then(function(j){prompt('New password for '+id+' (copy it now):',j.password)})}
+  if(a==='recode'){if(!confirm('Make a new referral code for '+id+'? The old code and link stop working.'))return;
+    api('/admin/creators/'+id+'/recode',{}).then(function(j){prompt('New code for '+id+':',j.code);load()})}
   if(a==='off'||a==='on'){api('/admin/creators/'+id+'/active',{active:a==='on'}).then(load)}
   if(a==='paid'){if(!confirm('Mark all pending and ready commissions for '+id+' as PAID?'))return;
     api('/admin/creators/'+id+'/mark-paid',{}).then(function(j){alert(j.count+' sales marked paid, '+inr(j.amount));load()})}

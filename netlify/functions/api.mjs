@@ -219,6 +219,24 @@ export default async (req) => {
           await creators.setJSON("c:" + c.id, c);
           return json({ password: pw });
         }
+        if (m[2] === "/recode" && method === "POST") {
+          let code = "";
+          for (let i = 0; i < 20 && !code; i++) {
+            const al = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+            let c = "";
+            for (let j = 0; j < 7; j++) c += al[crypto.randomInt(al.length)];
+            if (!(await creators.get("code:" + c, { type: "json" }))) code = c;
+          }
+          const old = c.code;
+          for (const r of await all(refs, "r:" + old + ":")) {
+            await refs.setJSON("r:" + code + ":" + r.id, { ...r, code });
+            await refs.delete("r:" + old + ":" + r.id);
+          }
+          await creators.setJSON("code:" + code, { id: c.id });
+          await creators.delete("code:" + old);
+          c.code = code; await creators.setJSON("c:" + c.id, c);
+          return json({ code });
+        }
         if (m[2] === "/active" && method === "POST") {
           c.active = !!body.active; await creators.setJSON("c:" + c.id, c);
           return json({ ok: true });
